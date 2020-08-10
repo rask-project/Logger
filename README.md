@@ -32,6 +32,11 @@ Example:
 ```
 
 ### Usage
+Include in your \*.pro
+
+```pro
+LIBS += -lQtRaskLogger
+```
 
 ```cpp
 #include <QDebug>
