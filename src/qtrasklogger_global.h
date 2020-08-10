@@ -1,0 +1,12 @@
+#ifndef QTRASKLOGGER_GLOBAL_H
+#define QTRASKLOGGER_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(QTRASKLOGGER_LIBRARY)
+#  define QTRASKLOGGER_EXPORT Q_DECL_EXPORT
+#else
+#  define QTRASKLOGGER_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // LOGGER_GLOBAL_H
