@@ -16,9 +16,15 @@ public:
 
     ~QtRaskLoggerWriter();
 
-    inline void setFilename(const QString &filename) { m_filename = filename; m_logFile.setFileName(filename); emit filenameChanged(); }
+    inline void setFilename(const QString &filename) { m_filename = filename; m_logFile.setFileName(filename); }
 
     inline void setMaxFileSize(const quint64 &size) { m_maxFileSize = size; }
+
+    inline void setCompression(const bool &compression) { m_compression = compression; }
+
+    inline void setRotateByDay(const bool &rotateByDay) { m_rotateByDay = rotateByDay; }
+
+    void configure();
 
     void enqueue(const QString &message);
 
@@ -32,18 +38,21 @@ public:
 
 signals:
     void startTimerRotateByDay();
-    void filenameChanged();
 
 private slots:
     void rotateByDay();
 
     void rotateBySize();
 
+    bool isGzip(const QString &filename);
+
     void compress(const QString &filename);
 
 private:
     QString m_filename;
     qint64 m_maxFileSize;
+    bool m_compression;
+    bool m_rotateByDay;
     QFile m_logFile;
     QVector<QString> m_messages;
 

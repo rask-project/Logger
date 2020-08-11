@@ -1,9 +1,7 @@
 #include "qtraskloggerwriter.h"
-#include "qtraskcompress.h"
 
 #include <QDateTime>
 #include <QTextStream>
-#include <QDataStream>
 #include <QFileInfo>
 #include <QMimeDatabase>
 #include <QDir>
@@ -18,21 +16,29 @@ quint32 crc32buf(const QByteArray& data);
 QtRaskLoggerWriter::QtRaskLoggerWriter() :
     m_filename(),
     m_maxFileSize(0),
+    m_compression(false),
+    m_rotateByDay(false),
     m_logFile(),
     m_messages(),
     m_queueNotEmpty(),
     m_mutex(),
     m_timerRotateByDay(new QTimer),
-    m_intervalRotateByDay(10000)
+    m_intervalRotateByDay()
 {
-    connect(this, &QtRaskLoggerWriter::filenameChanged, this, &QtRaskLoggerWriter::rotateByDay);
     connect(m_timerRotateByDay, &QTimer::timeout, this, &QtRaskLoggerWriter::rotateByDay);
-    m_timerRotateByDay->start(m_intervalRotateByDay);
 }
 
 QtRaskLoggerWriter::~QtRaskLoggerWriter()
 {
     delete m_timerRotateByDay;
+}
+
+void QtRaskLoggerWriter::configure()
+{
+    if (m_rotateByDay) {
+        rotateByDay();
+        m_timerRotateByDay->start(m_intervalRotateByDay);
+    }
 }
 
 void QtRaskLoggerWriter::enqueue(const QString &message)
@@ -93,10 +99,14 @@ void QtRaskLoggerWriter::rotateByDay()
                         .arg(file.absolutePath())
                         .arg(file.lastModified().date().toString(Qt::DateFormat::ISODate))
                         .arg(file.fileName());
+
                 QFile(file.filePath()).rename(newName);
-                compress(newName);
+                if (!isGzip(file.fileName()) && m_compression)
+                    compress(newName);
             }
-            compress(filenameRotateByDay);
+
+            if (!isGzip(filenameRotateByDay) && m_compression)
+                compress(filenameRotateByDay);
         }
     }
 
@@ -121,19 +131,43 @@ void QtRaskLoggerWriter::rotateBySize()
         return collator.compare(file1, file2) > 0;
     });
 
-    for (const auto &file: rotated)
-        QFile(QString("%1/%2").arg(dir.path()).arg(file)).rename(QString("%1.%2").arg(m_filename).arg(rotate--));
-    QFile(m_filename).rename(QString("%1.1").arg(m_filename));
+    for (const auto &file: rotated) {
+        QString rotatedNewName;
+
+        bool compressed = isGzip(file);
+        if (compressed)
+            rotatedNewName = QString("%1.%2.gz").arg(m_filename).arg(rotate--);
+         else
+            rotatedNewName = QString("%1.%2").arg(m_filename).arg(rotate--);
+
+        QFile(QString("%1/%2").arg(dir.path()).arg(file)).rename(rotatedNewName);
+        if (!compressed && m_compression)
+            compress(rotatedNewName);
+    }
+
+    QString newName = QString("%1.1").arg(m_filename);
+    QFile(m_filename).rename(newName);
+    if (m_compression)
+        compress(newName);
 }
 
-void QtRaskLoggerWriter::compress(const QString &filename)
+bool QtRaskLoggerWriter::isGzip(const QString &filename)
 {
     QMimeDatabase db;
     QMimeType mime = db.mimeTypeForFile(filename);
     if (mime.inherits("application/gzip"))
-        return;
+        return true;
+    return false;
+}
 
-    QProcess processGzip;
-    processGzip.start("gzip", QStringList() << "-9" << filename);
-    processGzip.waitForFinished();
+void QtRaskLoggerWriter::compress(const QString &filename)
+{
+    QProcess gzip;
+    gzip.start("gzip", QStringList() << "-9" << filename);
+
+    if (!gzip.waitForStarted())
+        qFatal("%s", gzip.errorString().toLatin1().constData());
+
+    if (!gzip.waitForFinished())
+        qFatal("%s", gzip.errorString().toLatin1().constData());
 }

@@ -47,6 +47,9 @@ QtRaskLogger::QtRaskLogger(const QString &configFile):
     m_loggerWriter = new QtRaskLoggerWriter;
     m_loggerWriter->setFilename(m_config->config["filename"].toString());
     m_loggerWriter->setMaxFileSize(m_config->config["maxFileSize"].toInt());
+    m_loggerWriter->setCompression(m_config->config["compression"].toBool());
+    m_loggerWriter->setRotateByDay(m_config->config["rotateByDay"].toBool());
+    m_loggerWriter->configure();
     m_loggerWriter->start();
 
     if (!m_level)
@@ -103,6 +106,8 @@ QtRaskLoggerConfig::QtRaskLoggerConfig(const QString &filename):
     config = QJsonObject({
                              { "filename", "/tmp/qtrasklogger.log" },
                              { "maxFileSize", 2 },
+                             { "compression", true },
+                             { "rotateByDay", true },
                              { "level", QJsonArray({
                                    "Debug", "Info", "Error", "Warn"
                                }) },
@@ -118,11 +123,13 @@ void QtRaskLoggerConfig::loadJsonFile()
     QFile file(m_filename);
     if (!file.exists()) {
         qWarning() << "Config file" << m_filename << "not found";
+        qCritical() << "Using default configuration" << config;
         return;
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
         qCritical() << "Config file" << m_filename << "was not loaded";
+        qCritical() << "Using default configuration" << config;
         return;
     }
 
@@ -131,6 +138,7 @@ void QtRaskLoggerConfig::loadJsonFile()
     QJsonDocument doc = QJsonDocument::fromJson(stream.readAll().toUtf8(), &error);
     if (error.error != QJsonParseError::NoError) {
         qCritical() << "An error occurred while parsing JSON file:" << error.errorString();
+        qCritical() << "Using default configuration" << config;
         return;
     }
 

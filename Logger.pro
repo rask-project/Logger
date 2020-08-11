@@ -27,11 +27,14 @@ HEADERS += \
     src/qtrasklogger_global.h \
     src/qtraskloggerwriter.h
 
+
+
 # Default rules for deployment.
 unix {
     target.path = /usr/lib
-    headers.path = /usr/include
-    headers.files = $$HEADERS
+    headers.path = /usr/include/QtRaskLogger
+    headers.files =  src/QtRaskLogger \
+                    $$HEADERS
 }
 
 INSTALLS += target headers
