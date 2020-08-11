@@ -56,14 +56,14 @@ void QtRaskLoggerWriter::write(const QString &message)
 void QtRaskLoggerWriter::run()
 {
     while (true) {
-        if (m_messages.isEmpty())
-            continue;
-
         decltype (m_messages) copy;
         {
             QMutexLocker locker(&m_mutex);
             std::swap(copy, m_messages);
         }
+
+        if (copy.isEmpty())
+            continue;
 
         if (!writeInFile())
             qFatal("Error: %s", m_logFile.errorString().toLatin1().constData());

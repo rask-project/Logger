@@ -83,6 +83,9 @@ void QtRaskLogger::logger(QtMsgType type, const QMessageLogContext &logContext, 
         typeStr = "Fatal";
         level = QtRaskLogger::Level::Error;
         break;
+    default:
+        typeStr = "Debug";
+        level = QtRaskLogger::Level::Debug;
     }
 
     QString message;
