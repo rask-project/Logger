@@ -1,6 +1,10 @@
 # QtRaskLogger
 A simple and thread safe logger using Qt QMessageLogger
 
+### Dependences
+* Qt 5.X
+* C++ 14
+
 ### Install
 ```bash
 qmake Logger.pro
