@@ -28,10 +28,12 @@ void QtRaskLogger::enqueueMessage(const QString &message, QtRaskLogger::Level ty
         qDebug().noquote() << message;
 }
 
-QtRaskLogger::QtRaskLogger(const QString &configFile):
+QtRaskLogger::QtRaskLogger(const QString &configFile, QObject *parent):
+    QObject(parent),
     m_level(),
     m_config(new QtRaskLoggerConfig(configFile)),
-    m_loggerWriter(nullptr)
+    m_loggerWriter(nullptr),
+    m_threadLoggerWriter()
 {
     for (const auto &level: m_config->config["level"].toArray()) {
         if (level.toString() == "Debug")
@@ -44,13 +46,18 @@ QtRaskLogger::QtRaskLogger(const QString &configFile):
             m_level |= QtRaskLogger::Level::Warning;
     }
 
-    m_loggerWriter = new QtRaskLoggerWriter;
-    m_loggerWriter->setFilename(m_config->config["filename"].toString());
-    m_loggerWriter->setMaxFileSize(m_config->config["maxFileSize"].toInt());
-    m_loggerWriter->setCompression(m_config->config["compression"].toBool());
-    m_loggerWriter->setRotateByDay(m_config->config["rotateByDay"].toBool());
-    m_loggerWriter->configure();
-    m_loggerWriter->start();
+    m_loggerWriter = std::make_unique<QtRaskLoggerWriter>();
+    m_loggerWriter.get()->moveToThread(&m_threadLoggerWriter);
+    m_threadLoggerWriter.start();
+
+    connect(&m_threadLoggerWriter, &QThread::started, [=]() {
+        m_loggerWriter.get()->setFilename(m_config->config["filename"].toString());
+        m_loggerWriter.get()->setMaxFileSize(m_config->config["maxFileSize"].toInt());
+        m_loggerWriter.get()->setCompression(m_config->config["compression"].toBool());
+        m_loggerWriter.get()->setRotateByDay(m_config->config["rotateByDay"].toBool());
+        m_loggerWriter.get()->configure();
+        m_loggerWriter.get()->run();
+    });
 
     if (!m_level)
         m_level = QtRaskLogger::Level::Info | QtRaskLogger::Level::Debug | QtRaskLogger::Level::Error | QtRaskLogger::Level::Warning;

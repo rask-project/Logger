@@ -11,33 +11,31 @@
 #include <QProcess>
 #include <QDebug>
 
-quint32 crc32buf(const QByteArray& data);
-
-QtRaskLoggerWriter::QtRaskLoggerWriter() :
+QtRaskLoggerWriter::QtRaskLoggerWriter(QObject *parent) :
+    QObject(parent),
     m_filename(),
     m_maxFileSize(0),
     m_compression(false),
     m_rotateByDay(false),
     m_logFile(),
     m_messages(),
-    m_queueNotEmpty(),
     m_mutex(),
-    m_timerRotateByDay(new QTimer),
+    m_timerRotateByDay(nullptr),
     m_intervalRotateByDay()
-{
-    connect(m_timerRotateByDay, &QTimer::timeout, this, &QtRaskLoggerWriter::rotateByDay);
-}
+{}
 
 QtRaskLoggerWriter::~QtRaskLoggerWriter()
-{
-    delete m_timerRotateByDay;
-}
+{}
 
 void QtRaskLoggerWriter::configure()
 {
     if (m_rotateByDay) {
         rotateByDay();
-        m_timerRotateByDay->start(m_intervalRotateByDay);
+
+        m_timerRotateByDay = std::make_unique<QTimer>();
+        m_timerRotateByDay.get()->setInterval(m_intervalRotateByDay);
+        connect(m_timerRotateByDay.get(), &QTimer::timeout, this, &QtRaskLoggerWriter::rotateByDay);
+        m_timerRotateByDay.get()->start(m_intervalRotateByDay);
     }
 }
 
@@ -56,6 +54,7 @@ void QtRaskLoggerWriter::write(const QString &message)
 void QtRaskLoggerWriter::run()
 {
     while (true) {
+        QThread::msleep(5);
         decltype (m_messages) copy;
         {
             QMutexLocker locker(&m_mutex);
@@ -112,8 +111,6 @@ void QtRaskLoggerWriter::rotateByDay()
 
     QDateTime now = QDateTime::currentDateTime();
     m_intervalRotateByDay = midnigth.toTime_t() > now.toTime_t() ? now.msecsTo(midnigth) : midnigth.msecsTo(now);
-
-    m_timerRotateByDay->setInterval(m_intervalRotateByDay);
 }
 
 void QtRaskLoggerWriter::rotateBySize()

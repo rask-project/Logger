@@ -3,16 +3,17 @@
 #include <QObject>
 #include <QFile>
 #include <QThread>
-#include <QWaitCondition>
 #include <QMutexLocker>
 #include <QTimer>
+#include <QVector>
+#include <memory>
 
-class QtRaskLoggerWriter : public QThread
+class QtRaskLoggerWriter : public QObject
 {
     Q_OBJECT
 
 public:
-    QtRaskLoggerWriter();
+    explicit QtRaskLoggerWriter(QObject *parent = nullptr);
 
     ~QtRaskLoggerWriter();
 
@@ -34,7 +35,7 @@ public:
 
     void write(const QString &message);
 
-    void run() override;
+    void run();
 
 signals:
     void startTimerRotateByDay();
@@ -56,9 +57,7 @@ private:
     QFile m_logFile;
     QVector<QString> m_messages;
 
-    QWaitCondition m_queueNotEmpty;
     QMutex m_mutex;
-
-    QTimer *m_timerRotateByDay;
+    std::unique_ptr<QTimer> m_timerRotateByDay;
     uint m_intervalRotateByDay;
 };

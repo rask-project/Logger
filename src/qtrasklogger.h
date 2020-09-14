@@ -1,17 +1,22 @@
 #pragma once
 
-#include <QVector>
+#include <QObject>
+#include <QThread>
 #include <QMutex>
+#include <QVector>
 #include <QFlags>
 #include <QDateTime>
 #include <QJsonObject>
+#include <memory>
+
 #include "qtrasklogger_global.h"
 #include "qtraskloggerwriter.h"
 
 class QtRaskLoggerConfig;
 
-class QTRASKLOGGER_EXPORT QtRaskLogger
+class QTRASKLOGGER_EXPORT QtRaskLogger : public QObject
 {
+    Q_OBJECT
 public:
     enum class Level
     {
@@ -35,9 +40,10 @@ private:
     bool m_showStd;
     QtRaskLoggerConfig *m_config;
 
-    QtRaskLoggerWriter *m_loggerWriter;
+    std::unique_ptr<QtRaskLoggerWriter> m_loggerWriter;
+    QThread m_threadLoggerWriter;
 
-    QtRaskLogger(const QString &configFile);
+    QtRaskLogger(const QString &configFile, QObject *parent = nullptr);
     ~QtRaskLogger() = default;
     QtRaskLogger(const QtRaskLogger &) = delete;
     QtRaskLogger& operator=(const QtRaskLogger &) = delete;
