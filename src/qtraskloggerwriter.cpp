@@ -29,6 +29,7 @@ QtRaskLoggerWriter::~QtRaskLoggerWriter()
 
 void QtRaskLoggerWriter::configure()
 {
+    checkLogFileDir();
     if (m_rotateByDay) {
         rotateByDay();
 
@@ -43,6 +44,18 @@ void QtRaskLoggerWriter::enqueue(const QString &message)
 {
     QMutexLocker locker(&m_mutex);
     m_messages.append(message);
+}
+
+void QtRaskLoggerWriter::checkLogFileDir()
+{
+    QFileInfo logFile(m_logFile);
+    QDir logDir;
+
+    if (!logDir.exists(logFile.absolutePath())) {
+        if (!logDir.mkdir(logFile.absolutePath())) {
+            qFatal("Create log file path");
+        }
+    }
 }
 
 void QtRaskLoggerWriter::write(const QString &message)

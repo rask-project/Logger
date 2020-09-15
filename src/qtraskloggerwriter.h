@@ -40,6 +40,9 @@ public:
 signals:
     void startTimerRotateByDay();
 
+private:
+    void checkLogFileDir();
+
 private slots:
     void rotateByDay();
 
